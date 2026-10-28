@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shopbot Commercial Job Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #161b24;
+    --surface2: #1e2530;
+    --border: #2a3040;
+    --accent: #00e5a0;
+    --accent-dim: rgba(0,229,160,0.12);
+    --accent-mid: rgba(0,229,160,0.25);
+    --text: #e8edf5;
+    --muted: #7a8899;
+    --warn: #f59e0b;
+    --warn-bg: rgba(245,158,11,0.1);
+    --success: #00e5a0;
+    --success-bg: rgba(0,229,160,0.1);
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo-mark {
+    width: 36px; height: 36px;
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: -1px;
+  }
+
+  header h1 {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+
+  header p {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .version {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  main { padding: 36px 40px; max-width: 1000px; }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 10px;
+    padding: 48px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+  .drop-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .drop-icon {
+    width: 48px; height: 48px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .drop-icon svg { width: 22px; height: 22px; stroke: var(--muted); }
+
+  .drop-zone h2 { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+  .drop-zone p { font-size: 13px; color: var(--muted); }
+  .drop-zone .ext-badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 10px;
+    color: var(--muted);
+  }
+
+  /* File list */
+  #fileList { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+
+  .file-chip {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px 14px;
+    font-size: 13px;
+    animation: slideIn 0.15s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform: translateY(0); } }
+
+  .file-chip .fname { flex: 1; font-family: var(--mono); font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-chip .fmeta { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+  /* Results */
+  #results { margin-top: 36px; display: none; }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .stat-card.highlight {
+    border-color: rgba(0,229,160,0.4);
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(0,229,160,0.06) 100%);
+  }
+  .stat-label { font-size: 11px; color: var(--muted); font-family: var(--mono); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
+  .stat-value { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--text); }
+  .stat-card.highlight .stat-value { color: var(--accent); }
+
+  /* Table */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { background: var(--surface2); }
+  th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .td-file { font-family: var(--mono); font-size: 12px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .td-time { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+  .td-jobs { font-family: var(--mono); color: var(--muted); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-family: var(--mono);
+    padding: 3px 9px; border-radius: 4px;
+    font-weight: 500;
+  }
+  .badge.ok { background: var(--success-bg); color: var(--success); border: 1px solid rgba(0,229,160,0.2); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); border: 1px solid rgba(245,158,11,0.2); }
+  .badge svg { width: 10px; height: 10px; }
+
+  /* Checkbox styling */
+  .run-check {
+    width: 16px; height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  /* File header rows in table */
+  tr.file-header td {
+    background: var(--surface2);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 7px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  tr.file-header td:first-child { color: var(--text); }
+  /* Disabled (unchecked) run rows */
+  tr.run-disabled td { opacity: 0.38; text-decoration: line-through; }
+  tr.run-disabled td:first-child { text-decoration: none; }
+
+  /* Total row */
+  .total-row td { background: var(--surface2); font-weight: 500; border-top: 2px solid var(--border); }
+  .total-row .td-time { font-size: 15px; }
+
+  /* Actions */
+  .actions { display: flex; gap: 10px; margin-top: 18px; }
+
+  button {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  button:hover { border-color: var(--muted); color: var(--text); background: var(--surface); }
+  button.primary {
+    background: var(--accent-dim);
+    border-color: rgba(0,229,160,0.4);
+    color: var(--accent);
+  }
+  button.primary:hover { background: var(--accent-mid); }
+  button svg { width: 14px; height: 14px; }
+
+  /* Full-width Pay Here button */
+  .pay-btn-wrap { margin-top: 12px; }
+  .pay-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(0,229,160,0.5);
+    background: rgba(0,229,160,0.15);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .pay-btn:hover { background: rgba(0,229,160,0.25); border-color: rgba(0,229,160,0.8); }
+  .pay-btn svg { width: 18px; height: 18px; }
+
+  /* Remove (×) button on file chips */
+  .chip-remove {
+    margin-left: 8px;
+    width: 20px; height: 20px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    line-height: 1;
+    padding: 0;
+    flex-shrink: 0;
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+  }
+  .chip-remove:hover { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); color: #ef4444; }
+
+  /* Billing panel */
+  .billing-panel {
+    margin-top: 28px;
+    border: 1px solid rgba(0,229,160,0.3);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .billing-header {
+    background: rgba(0,229,160,0.08);
+    border-bottom: 1px solid rgba(0,229,160,0.2);
+    padding: 11px 18px;
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .billing-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0;
+  }
+  .bill-item {
+    padding: 20px 22px;
+    border-right: 1px solid var(--border);
+  }
+  .bill-item:last-child { border-right: none; }
+  .bill-item.total-bill { background: rgba(0,229,160,0.05); }
+  .bill-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .bill-value { font-family: var(--mono); font-size: 24px; font-weight: 600; color: var(--text); line-height: 1; }
+  .bill-item.total-bill .bill-value { color: var(--accent); font-size: 28px; }
+  .bill-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+  /* Empty state */
+  #emptyNote {
+    text-align: center;
+    padding: 28px;
+    font-size: 13px;
+    color: var(--muted);
+    font-family: var(--mono);
+    display: none;
+  }
+
+  /* Billing panel */
+  .billing-panel {
+    margin-top: 32px;
+    border: 1px solid rgba(0,229,160,0.3);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .billing-header {
+    background: rgba(0,229,160,0.08);
+    border-bottom: 1px solid rgba(0,229,160,0.2);
+    padding: 13px 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .billing-header span {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .billing-body {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+  }
+  .bill-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .bill-item .bill-label { font-size: 11px; color: var(--muted); font-family: var(--mono); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+  .bill-item .bill-value { font-family: var(--mono); font-size: 22px; font-weight: 600; color: var(--text); }
+  .bill-item .bill-sub { font-size: 11px; color: var(--muted); margin-top: 4px; font-family: var(--mono); }
+  .bill-item.total-bill { border-color: rgba(0,229,160,0.35); }
+  .bill-item.total-bill .bill-value { font-size: 28px; color: var(--accent); }
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">SB</div>
+  <div>
+    <h1>Shopbot Commercial Job Calculator</h1>
+    <p>Calculator for Shopbot commercial jobs at Bitraf</p>
+  </div>
+  <span class="version">v1.1</span>
+</header>
+
+<main>
+  <div class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" multiple accept=".log,.txt">
+    <div class="drop-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 16V8m0 0-3 3m3-3 3 3"/>
+        <rect x="3" y="3" width="18" height="18" rx="3"/>
+      </svg>
+    </div>
+    <h2>Drop Shopbot log files here</h2>
+    <p>or click anywhere in this box to browse</p>
+    <span class="ext-badge">.log &nbsp;/&nbsp; .txt</span>
+  </div>
+
+  <div id="fileList"></div>
+  <div id="emptyNote">No elapsed time entries found in the loaded files.</div>
+
+  <div id="results">
+    <p class="section-label">Summary</p>
+    <div class="stats-grid">
+      <div class="stat-card highlight">
+        <div class="stat-label">Total run time</div>
+        <div class="stat-value" id="totalTime">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total job runs</div>
+        <div class="stat-value" id="totalJobs">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Files loaded</div>
+        <div class="stat-value" id="totalFiles">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg time / job</div>
+        <div class="stat-value" id="avgTime">—</div>
+      </div>
+    </div>
+
+    <p class="section-label">Per-file breakdown</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px;"></th>
+            <th>File / Run</th>
+            <th>Timestamp</th>
+            <th>Run time</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+        <tfoot id="tableFoot"></tfoot>
+      </table>
+      <div id="emptyNote2" style="display:none; text-align:center; padding:24px; font-size:13px; color:var(--muted); font-family:var(--mono);">No entries found.</div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" onclick="exportCSV()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 12-3-3m3 3 3-3M4 20h16"/></svg>
+        Export CSV
+      </button>
+      <button onclick="clearAll()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+        Clear all
+      </button>
+    </div>
+
+    <div class="billing-panel">
+      <div class="billing-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span>Billing — 87,50 kr per 15 min unit</span>
+      </div>
+      <div class="billing-body">
+        <div class="bill-item">
+          <div class="bill-label">Actual run time</div>
+          <div class="bill-value" id="billActual">—</div>
+          <div class="bill-sub">exact total</div>
+        </div>
+        <div class="bill-item">
+          <div class="bill-label">Rounded up to</div>
+          <div class="bill-value" id="billRounded">—</div>
+          <div class="bill-sub">nearest 15 min</div>
+        </div>
+        <div class="bill-item">
+          <div class="bill-label">Units (× 15 min)</div>
+          <div class="bill-value" id="billUnits">—</div>
+          <div class="bill-sub">billable units</div>
+        </div>
+        <div class="bill-item total-bill">
+          <div class="bill-label">Total to pay</div>
+          <div class="bill-value" id="billTotal">—</div>
+          <div class="bill-sub">kr</div>
+        </div>
+    </div>
+
+    <div class="pay-btn-wrap">
+      <a id="payLink" class="pay-btn" href="https://bitmart.bitraf.no/produkt/leie-shopbot-cnc-fres/" target="_blank">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        Pay Here
+      </a>
+    </div>
+
+  </div><!-- end #results -->
+</main>
+
+<script>
+  const allFiles = [];
+
+  function parseLog(text, filename) {
+    const lines = text.split('\n');
+    const jobs = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.includes('Last Complete') && !line.includes('Last Not Complete')) continue;
+      if (!line.includes('Elapsed:')) continue;
+      const m = line.match(/Elapsed:\s*(\d{2}):(\d{2}):(\d{2})/);
+      if (!m) continue;
+      const seconds = parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseInt(m[3]);
+      const next = lines[i + 1] || '';
+      const completed = next.includes('File Completed:Yes');
+      const dateM = line.match(/(\d{2}:\d{2}:\d{2}\s+\d{2}-\d{2}-\d{4})/);
+      jobs.push({ seconds, completed, timestamp: dateM ? dateM[1].trim() : '', enabled: true });
+    }
+    return { filename, jobs };
+  }
+
+  function fmtTime(s) {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    const parts = [];
+    if (h) parts.push(h + 'h');
+    if (m || h) parts.push(m + 'm');
+    parts.push(sec + 's');
+    return parts.join(' ');
+  }
+
+  function render() {
+    if (allFiles.length === 0) {
+      document.getElementById('results').style.display = 'none';
+      return;
+    }
+
+    const tbody = document.getElementById('tableBody');
+    const tfoot = document.getElementById('tableFoot');
+    tbody.innerHTML = '';
+    tfoot.innerHTML = '';
+
+    let grandSecs = 0, grandJobs = 0;
+
+    allFiles.forEach((f, fi) => {
+      if (f.jobs.length === 0) return;
+
+      const frow = document.createElement('tr');
+      frow.className = 'file-header';
+      frow.innerHTML = `<td></td><td colspan="4">${f.filename} — ${f.jobs.length} run${f.jobs.length !== 1 ? 's' : ''}</td>`;
+      tbody.appendChild(frow);
+
+      f.jobs.forEach((job, ji) => {
+        if (job.enabled) { grandSecs += job.seconds; grandJobs++; }
+        const tr = document.createElement('tr');
+        tr.className = job.enabled ? '' : 'run-disabled';
+        tr.innerHTML = `
+          <td style="text-align:center;">
+            <input type="checkbox" class="run-check" ${job.enabled ? 'checked' : ''}
+              onchange="toggleRun(${fi},${ji},this.checked)">
+          </td>
+          <td class="td-file">Run ${ji + 1}</td>
+          <td class="td-jobs" style="font-size:11px; color:var(--muted);">${job.timestamp || '—'}</td>
+          <td class="td-time">${fmtTime(job.seconds)}</td>
+          <td>
+            <span class="badge ${job.completed ? 'ok' : 'warn'}">
+              <svg viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="4"/></svg>
+              ${job.completed ? 'Complete' : 'Incomplete'}
+            </span>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    });
+
+    if (grandJobs === 0 && allFiles.every(f => f.jobs.length === 0)) {
+      document.getElementById('results').style.display = 'none';
+      document.getElementById('emptyNote').style.display = 'block';
+      return;
+    }
+
+    const trow = document.createElement('tr');
+    trow.className = 'total-row';
+    trow.innerHTML = `
+      <td></td>
+      <td class="td-file">TOTAL (${grandJobs} run${grandJobs !== 1 ? 's' : ''})</td>
+      <td></td>
+      <td class="td-time">${fmtTime(grandSecs)}</td>
+      <td></td>`;
+    tfoot.appendChild(trow);
+
+    document.getElementById('totalTime').textContent = fmtTime(grandSecs);
+    document.getElementById('totalJobs').textContent = grandJobs;
+    document.getElementById('totalFiles').textContent = allFiles.length;
+    document.getElementById('avgTime').textContent = grandJobs > 0 ? fmtTime(Math.round(grandSecs / grandJobs)) : '—';
+
+    const units = grandSecs > 0 ? Math.ceil(grandSecs / 900) : 0;
+    const roundedSecs = units * 900;
+    const totalKr = units * 87.5;
+
+    document.getElementById('billActual').textContent = fmtTime(grandSecs);
+    document.getElementById('billRounded').textContent = fmtTime(roundedSecs);
+    document.getElementById('billUnits').textContent = units;
+    document.getElementById('billTotal').textContent = totalKr.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kr';
+
+    document.getElementById('results').style.display = 'block';
+  }
+
+  function toggleRun(fi, ji, enabled) {
+    allFiles[fi].jobs[ji].enabled = enabled;
+    render();
+  }
+
+  function addChip(name, jobCount, index) {
+    const fl = document.getElementById('fileList');
+    const d = document.createElement('div');
+    d.className = 'file-chip';
+    d.dataset.index = index;
+    d.innerHTML = `<div class="chip-dot"></div>
+      <span class="fname" title="${name}">${name}</span>
+      <span class="fmeta">${jobCount} run${jobCount !== 1 ? 's' : ''} found</span>
+      <button class="chip-remove" onclick="removeFile(${index})" title="Remove file">&#x2715;</button>`;
+    fl.appendChild(d);
+  }
+
+  function removeFile(index) {
+    allFiles.splice(index, 1);
+    const fl = document.getElementById('fileList');
+    fl.innerHTML = '';
+    allFiles.forEach((f, i) => addChip(f.filename, f.jobs.length, i));
+    render();
+  }
+
+  function processFile(file) {
+    const r = new FileReader();
+    r.onload = e => {
+      const parsed = parseLog(e.target.result, file.name);
+      const index = allFiles.length;
+      allFiles.push(parsed);
+      addChip(file.name, parsed.jobs.length, index);
+      render();
+    };
+    r.readAsText(file);
+  }
+
+  function clearAll() {
+    allFiles.length = 0;
+    document.getElementById('fileList').innerHTML = '';
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('emptyNote').style.display = 'none';
+  }
+
+  function exportCSV() {
+    const rows = [['File', 'Run', 'Timestamp', 'Seconds', 'Run Time', 'Complete', 'Included']];
+    let grandSecs = 0, grandJobs = 0;
+    allFiles.forEach(f => {
+      f.jobs.forEach((job, ji) => {
+        const inc = job.enabled !== false;
+        if (inc) { grandSecs += job.seconds; grandJobs++; }
+        rows.push([f.filename, `Run ${ji+1}`, job.timestamp, job.seconds, fmtTime(job.seconds), job.completed ? 'Yes' : 'No', inc ? 'Yes' : 'No']);
+      });
+    });
+    rows.push([]);
+    rows.push(['TOTAL (included runs)', grandJobs, '', grandSecs, fmtTime(grandSecs), '', '']);
+    rows.push([]);
+    const units = grandSecs > 0 ? Math.ceil(grandSecs / 900) : 0;
+    rows.push(['Billing', '', '', '', '', '', '']);
+    rows.push(['Actual run time', fmtTime(grandSecs), '', '', '', '', '']);
+    rows.push(['Rounded up (nearest 15 min)', fmtTime(units * 900), '', '', '', '', '']);
+    rows.push(['Billable units (x 15 min)', units, '', '', '', '', '']);
+    rows.push(['Rate per unit', '87,50 kr', '', '', '', '', '']);
+    rows.push(['Total to pay', (units * 87.5).toLocaleString('nb-NO', {minimumFractionDigits:2}) + ' kr', '', '', '', '', '']);
+    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'shopbot_run_times.csv';
+    a.click();
+  }
+
+  document.getElementById('fileInput').addEventListener('change', e => {
+    [...e.target.files].forEach(processFile);
+    e.target.value = '';
+  });
+
+  const dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    [...e.dataTransfer.files].forEach(processFile);
+  });
+</script>
+</body>
+</html>
